@@ -44,10 +44,10 @@ private:
         float t1 = -(l*(o-this->pos)) + desc;
         float t2 = -(l*(o-this->pos)) - desc;
         
-        //Discard negative solutions
-        if (t1 < 0) t1 = t2;
-        if (t2 < 0) t2 = t1;
-        if (t1 < 0 && t2 < 0) return -1;
+        //Discard negative or zero solutions
+        if (t1 <= 0) t1 = t2;
+        if (t2 <= 0) t2 = t1;
+        if (t1 <= 0 && t2 <= 0) return -1;
         
         //Return smallest possible solution        
         if (t2 <= t1) return t2;
@@ -65,20 +65,25 @@ Vec background(const Vec& pos, const Vec& dir) {
     return Vec(y*0.3 + 0.05, y*0.3 + 0.05, y*0.7 + 0.05);
 }
 
-Vec sample(float x, float y, Camera c, Sphere s) {
-    Vec dir = !Vec(x,y,c.f);
-    
-    Vec sol = s.collision(c.pos, dir);
-    if (sol.isinf()) return background(c.pos, dir);
+Vec sample(Vec pos, Vec dir, Sphere s, int recursiveCount) {
+    if (recursiveCount >= 2) return background(pos,dir);
+        
+    Vec sol = s.collision(pos, dir);
+    if (sol.isinf()) return background(pos, dir);
     
     Vec colour (0.1,0.1,0.1);
+    
+    Vec normal = !s.objectSpace(sol);
+    Vec reflectedDirection = dir + (-2*normal*(normal*dir));
+    
+    colour += 0.9*sample(sol + reflectedDirection*0.0001, reflectedDirection, s, recursiveCount+1);
     
     return colour;
 }
 
 int main() {
     Camera camera;
-    camera.pos = Vec(0,0,-5);
+    camera.pos = Vec(0,0,-2);
     Sphere s;
 
     //Netppm image
@@ -88,7 +93,10 @@ int main() {
     
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            Vec color = sample((x/(float) width) - 0.5, (y/(float) height) - 0.5, camera, s);
+            float normX = (x/(float) width) - 0.5;
+            float normY = (y/(float) height) - 0.5;
+            Vec dir = !Vec(normX, normY, camera.f);
+            Vec color = sample(camera.pos, dir, s, 0);
             
             //Convert form [0.0, 1.0] to [0, 255]
             std::cout << " " << int(color.x*255.0) 
