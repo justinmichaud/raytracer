@@ -71,14 +71,18 @@ Vec sample(Vec pos, Vec dir, Sphere s, int recursiveCount) {
     Vec sol = s.collision(pos, dir);
     if (sol.isinf()) return background(pos, dir);
     
-    Vec colour (0.1,0.1,0.1);
-    
     Vec normal = !s.objectSpace(sol);
-    Vec reflectedDirection = dir + (-2*normal*(normal*dir));
     
-    colour += 0.9*sample(sol + reflectedDirection*0.0001, reflectedDirection, s, recursiveCount+1);
+    Vec reflectedDirection = dir + (-2*normal*(normal*dir));    
+    Vec reflectedSample = sample(sol + reflectedDirection*0.0001, 
+        reflectedDirection, s, recursiveCount+1);
     
-    return colour;
+    float shade = reflectedDirection * normal;
+    if (shade < 0) shade = 0;
+    
+    float ambient = 0.2, diffuse = 0.7;
+    
+    return Vec(1,1,1) * (ambient + diffuse*shade) * 0.1 + 0.9*reflectedSample;
 }
 
 int main() {
