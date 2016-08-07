@@ -16,10 +16,16 @@ class Sphere {
 public:
     Vec pos = Vec(0,0,0);
     float radius = 0.5;
+    Vec colour = Vec(1,1,1);
+    float reflect=0.5;
+    bool light = false;
     
     Sphere() {}
-    
     Sphere(Vec pos, float radius): pos{pos}, radius{radius} {}
+    Sphere(Vec pos, float radius, Vec colour, bool light): 
+        pos{pos}, radius{radius}, colour{colour}, light{light} {}
+    Sphere(Vec pos, float radius, Vec colour, float reflect): 
+        pos{pos}, radius{radius}, colour{colour}, reflect{reflect} {}
     
     Vec collision(const Vec& origin, const Vec& direction) const {
         float solution = this->solution(origin, direction);
@@ -63,7 +69,7 @@ Vec background(const Vec& pos, const Vec& dir) {
     
     float y = background.objectSpace(b).y/background.radius/2 + 0.5;
     
-    return Vec(y*0.3 + 0.05, y*0.3 + 0.05, y*0.7 + 0.05);
+    return Vec(0,0,0);//Vec(y*0.3 + 0.05, y*0.3 + 0.05, y*0.7 + 0.05);
 }
 
 Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCount) {
@@ -83,6 +89,7 @@ Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCoun
     }
     
     if (intersection.isinf()) return background(pos, dir);
+    if (sphere->light) return sphere->colour;
     
     Vec normal = !sphere->objectSpace(intersection);
     
@@ -93,16 +100,16 @@ Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCoun
     float shade = reflectedDirection * normal;
     if (shade < 0) shade = 0;
     
-    float ambient = 0.2, diffuse = 0.7;
-    
-    return Vec(1,1,1) * (ambient + diffuse*shade) * 0.1 + 0.9*reflectedSample;
+    return sphere->colour*(0.05 + 0.1*shade)*(1.0-sphere->reflect)
+        + sphere->reflect*reflectedSample;
 }
 
 int main() {
     Camera camera;
     camera.pos = Vec(0,0,-2);
     std::vector<Sphere> world = {
-        Sphere(Vec(-0.5,0,0), 0.45), 
+        Sphere(Vec(-3,0,0), 1, Vec(1,0,0), true), 
+        Sphere(Vec(-0.5,0,0), 0.45, Vec(1,0,0), 0.5f), 
         Sphere(Vec(0.5,0,0), 0.45)
     };
 
@@ -119,9 +126,10 @@ int main() {
             Vec color = sample(camera.pos, dir, world, 0);
             
             //Convert form [0.0, 1.0] to [0, 255]
-            std::cout << " " << int(color.x*255.0) 
-                << " " << int(color.y*255.0) 
-                << " " << int(color.z*255.0);
+            std::cout 
+                << " " << int(std::min(255.0, std::max(0.0, color.x*255.0)))
+                << " " << int(std::min(255.0, std::max(0.0, color.y*255.0)))
+                << " " << int(std::min(255.0, std::max(0.0, color.z*255.0)));
         } 
     }
     
