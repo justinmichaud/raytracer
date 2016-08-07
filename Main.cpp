@@ -67,9 +67,9 @@ Vec background(const Vec& pos, const Vec& dir) {
     Vec b = background.collision(pos, dir);
     if (b.isinf()) return Vec(1,0,0); //Should not happen
     
-    float y = background.objectSpace(b).y/background.radius/2 + 0.5;
+    float y = background.objectSpace(b).y/background.radius + 0.5;
     
-    return Vec(0,0,0);//Vec(y*0.3 + 0.05, y*0.3 + 0.05, y*0.7 + 0.05);
+    return Vec(y*0.5 + 0.05, y*0.5 + 0.05, y*0.9 + 0.05);
 }
 
 Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCount) {
@@ -97,10 +97,10 @@ Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCoun
     Vec reflectedSample = sample(intersection + reflectedDirection*0.0001, 
         reflectedDirection, world, recursiveCount+1);
     
-    float shade = reflectedDirection * normal;
+    float shade = Vec(1.4, -1.4, 0) * normal;
     if (shade < 0) shade = 0;
     
-    return sphere->colour*(0.05 + 0.1*shade)*(1.0-sphere->reflect)
+    return sphere->colour*(0.05 + 0.95*shade)*(1.0-sphere->reflect)
         + sphere->reflect*reflectedSample;
 }
 
@@ -108,7 +108,7 @@ int main() {
     Camera camera;
     camera.pos = Vec(0,0,-2);
     std::vector<Sphere> world = {
-        Sphere(Vec(-3,0,0), 1, Vec(1,0,0), true), 
+        Sphere(Vec(-3,0,0), 0.2, Vec(1,0,0), true), 
         Sphere(Vec(-0.5,0,0), 0.45, Vec(1,0,0), 0.5f), 
         Sphere(Vec(0.5,0,0), 0.45)
     };
