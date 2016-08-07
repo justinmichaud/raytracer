@@ -39,14 +39,10 @@ private:
             - (~(o-this->pos))*(~(o-this->pos)) + (this->radius*this->radius);
         if (desc < 0) return -1;
         
-        //std::cerr << "Desc: " << desc << std::endl;
-        
         desc = sqrt(desc);
         
         float t1 = -(l*(o-this->pos)) + desc;
         float t2 = -(l*(o-this->pos)) - desc;
-        
-        //std::cerr << "Solutions: " << t1 << "," << t2 << std::endl;
         
         //Discard negative solutions
         if (t1 < 0) t1 = t2;
@@ -66,17 +62,14 @@ Vec background(const Vec& pos, const Vec& dir) {
     
     float y = background.objectSpace(b).y/background.radius/2 + 0.5;
     
-    //std::cerr << y << std::endl;
-    
     return Vec(y*0.3 + 0.05, y*0.3 + 0.05, y*0.7 + 0.05);
 }
 
-Vec sample(float x, float y, Sphere s) {
-    Vec pos = Vec(x,y,-2);
-    Vec dir = Vec(0,0,1);
+Vec sample(float x, float y, Camera c, Sphere s) {
+    Vec dir = !Vec(x,y,c.f);
     
-    Vec sol = s.collision(pos, dir);
-    if (sol.isinf()) return background(pos, dir);
+    Vec sol = s.collision(c.pos, dir);
+    if (sol.isinf()) return background(c.pos, dir);
     
     Vec colour (0.1,0.1,0.1);
     
@@ -85,10 +78,8 @@ Vec sample(float x, float y, Sphere s) {
 
 int main() {
     Camera camera;
-    
+    camera.pos = Vec(0,0,-5);
     Sphere s;
-    
-    //std::cerr << background(Vec(0,0,-2), Vec(0,0,1)) << std::endl;
 
     //Netppm image
     int width = 300;
@@ -97,7 +88,7 @@ int main() {
     
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            Vec color = sample((x/(float) width) - 0.5, (y/(float) height) - 0.5, s);
+            Vec color = sample((x/(float) width) - 0.5, (y/(float) height) - 0.5, camera, s);
             
             //Convert form [0.0, 1.0] to [0, 255]
             std::cout << " " << int(color.x*255.0) 
