@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <vector>
 #include "Vector.h"
 
 class Camera {
@@ -65,17 +66,29 @@ Vec background(const Vec& pos, const Vec& dir) {
     return Vec(y*0.3 + 0.05, y*0.3 + 0.05, y*0.7 + 0.05);
 }
 
-Vec sample(Vec pos, Vec dir, Sphere s, int recursiveCount) {
+Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCount) {
     if (recursiveCount >= 2) return background(pos,dir);
-        
-    Vec sol = s.collision(pos, dir);
-    if (sol.isinf()) return background(pos, dir);
     
-    Vec normal = !s.objectSpace(sol);
+    Vec intersection = Vec::INFINITE;
+    const Sphere* sphere = &world[0];
+    
+    for (const Sphere& s : world) {
+        Vec sol = s.collision(pos, dir);
+        if (sol.isinf()) continue;
+        
+        if (~(sol - pos) <= ~(intersection - pos)) {
+            intersection = sol;
+            sphere = &s;
+        }
+    }
+    
+    if (intersection.isinf()) return background(pos, dir);
+    
+    Vec normal = !sphere->objectSpace(intersection);
     
     Vec reflectedDirection = dir + (-2*normal*(normal*dir));    
-    Vec reflectedSample = sample(sol + reflectedDirection*0.0001, 
-        reflectedDirection, s, recursiveCount+1);
+    Vec reflectedSample = sample(intersection + reflectedDirection*0.0001, 
+        reflectedDirection, world, recursiveCount+1);
     
     float shade = reflectedDirection * normal;
     if (shade < 0) shade = 0;
@@ -88,7 +101,10 @@ Vec sample(Vec pos, Vec dir, Sphere s, int recursiveCount) {
 int main() {
     Camera camera;
     camera.pos = Vec(0,0,-2);
-    Sphere s;
+    std::vector<Sphere> world = {
+        Sphere(Vec(-0.5,0,0), 0.45), 
+        Sphere(Vec(0.5,0,0), 0.45)
+    };
 
     //Netppm image
     int width = 300;
@@ -100,7 +116,7 @@ int main() {
             float normX = (x/(float) width) - 0.5;
             float normY = (y/(float) height) - 0.5;
             Vec dir = !Vec(normX, normY, camera.f);
-            Vec color = sample(camera.pos, dir, s, 0);
+            Vec color = sample(camera.pos, dir, world, 0);
             
             //Convert form [0.0, 1.0] to [0, 255]
             std::cout << " " << int(color.x*255.0) 
