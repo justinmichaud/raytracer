@@ -98,7 +98,12 @@ public:
     
     friend std::ostream& operator <<(std::ostream& strm, const Vec& a) {
         return strm << "(" << a.x << "," << a.y << "," << a.z << ")";
-    }     
+    }
+    
+    bool isinf() const {
+        return std::isinf(this->x) || std::isinf(this->y) || std::isinf(this->z)
+            || std::isnan(this->x) || std::isnan(this->y) || std::isnan(this->z);
+    }
 };
 
 const Vec Vec::ZERO = Vec(0,0,0);
