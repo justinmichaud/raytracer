@@ -1,10 +1,14 @@
 #pragma once
 #include <iostream>
 #include <cmath>
+#include <limits>
 
 class Vec {
 public:
     float x,y,z;
+    
+    static const Vec ZERO;
+    static const Vec INFINITE;
 
     Vec(float x, float y, float z): x(x), y(y), z(z) {}
     
@@ -96,4 +100,9 @@ public:
         return strm << "(" << a.x << "," << a.y << "," << a.z << ")";
     }     
 };
+
+const Vec Vec::ZERO = Vec(0,0,0);
+const Vec Vec::INFINITE = Vec(std::numeric_limits<float>::infinity(), 
+        std::numeric_limits<float>::infinity(), 
+        std::numeric_limits<float>::infinity());
 
