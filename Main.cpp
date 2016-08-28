@@ -38,6 +38,19 @@ public:
         return x - pos;
     }
     
+    bool operator ==(const Sphere &b) const {
+        return this->pos==b.pos && this->radius==b.radius && this->colour==b.colour
+            && this->reflect==b.reflect && this->light==b.light;
+    }
+    
+    bool operator !=(const Sphere &b) const {
+        return !(*this==b);
+    }
+    
+    friend std::ostream& operator <<(std::ostream& strm, const Sphere& a) {
+        return strm << "Sphere(" << a.pos << "," << a.radius << ")";
+    }
+    
 private:    
     float solution(const Vec& o, const Vec& l) const {
         //Solve for line-sphere intersection: 
@@ -69,12 +82,10 @@ Vec background(const Vec& pos, const Vec& dir) {
     
     float y = background.objectSpace(b).y/background.radius + 0.5;
     
-    return Vec(y*0.5 + 0.05, y*0.5 + 0.05, y*0.9 + 0.05);
+    return Vec(y*0.3 + 0.3, y*0.4 + 0.4, y*0.7 + 0.5).clamp(0.1, 1);
 }
 
-Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCount) {
-    if (recursiveCount >= 2) return background(pos,dir);
-    
+const Sphere& traceRay(const Vec& pos, const Vec& dir, const std::vector<Sphere>& world) {
     Vec intersection = Vec::INFINITE;
     const Sphere* sphere = &world[0];
     
@@ -88,34 +99,61 @@ Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCoun
         }
     }
     
-    if (intersection.isinf()) return background(pos, dir);
-    if (sphere->light) return sphere->colour;
+    return *sphere;
+}
+
+Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCount) {
+    if (recursiveCount >= 5) return Vec(0,0,0);
     
-    Vec normal = !sphere->objectSpace(intersection);
+    const Sphere& sphere = traceRay(pos, dir, world);
+    Vec intersection = sphere.collision(pos, dir);
+    
+    if (intersection.isinf()) return background(pos, dir);
+    if (sphere.light) return sphere.colour;
+    
+    Vec normal = !sphere.objectSpace(intersection);
+    
+    //Fix aliasing when some values are inside the sphere due to rounding    
+    intersection += normal*0.0001;
     
     Vec reflectedDirection = dir + (-2*normal*(normal*dir));    
-    Vec reflectedSample = sample(intersection + reflectedDirection*0.0001, 
+    Vec reflectedSample = sample(intersection, 
         reflectedDirection, world, recursiveCount+1);
+
+    //look for lights
+    Vec lighting = Vec(0,0,0);
+    for (const Sphere& light : world) {
+        if (!light.light) continue;
     
-    float shade = Vec(1.4, -1.4, 0) * normal;
-    if (shade < 0) shade = 0;
-    
-    return sphere->colour*(0.05 + 0.95*shade)*(1.0-sphere->reflect)
-        + sphere->reflect*reflectedSample;
+        Vec lightDir = !(light.pos - intersection);
+        const Sphere& closestObject = traceRay(intersection, lightDir, world);
+
+        if (closestObject != light) continue; //We are in shaddow of another object        
+        if (light.collision(intersection, lightDir).isinf()) continue; //This is not a real intersection
+        
+        //the object is illuminated by this light, so use cosine shading 
+        float shading = lightDir*normal;
+        if (shading < 0) continue;
+              
+        lighting += light.colour*shading;
+    }
+
+    return (1-sphere.reflect)*Vec(sphere.colour.x*lighting.x, sphere.colour.y*lighting.y, sphere.colour.z*lighting.z) 
+        + sphere.reflect*Vec(sphere.colour.x*reflectedSample.x, sphere.colour.y*reflectedSample.y, sphere.colour.z*reflectedSample.z);
 }
 
 int main() {
     Camera camera;
     camera.pos = Vec(0,0,-2);
     std::vector<Sphere> world = {
-        Sphere(Vec(-3,0,0), 0.2, Vec(1,0,0), true), 
-        Sphere(Vec(-0.5,0,0), 0.45, Vec(1,0,0), 0.5f), 
-        Sphere(Vec(0.5,0,0), 0.45)
+        Sphere(Vec(-10,0,0), 0.01, Vec(1,1,1), true), 
+        Sphere(Vec(-0.5,0.1,0), 0.2, Vec(0,1,0), 0.7f), 
+        Sphere(Vec(0.5,0,0), 0.3)
     };
 
     //Netppm image
-    int width = 300;
-    int height = 255;
+    int width = 500;
+    int height = 500;
     std::cout << "P3 " << width << " " << height << " 255";
     
     for (int y = 0; y < height; y++) {
@@ -123,13 +161,13 @@ int main() {
             float normX = (x/(float) width) - 0.5;
             float normY = (y/(float) height) - 0.5;
             Vec dir = !Vec(normX, normY, camera.f);
-            Vec color = sample(camera.pos, dir, world, 0);
+            Vec color = (255.0*sample(camera.pos, dir, world, 0)).clamp(0,255.0);
             
             //Convert form [0.0, 1.0] to [0, 255]
             std::cout 
-                << " " << int(std::min(255.0, std::max(0.0, color.x*255.0)))
-                << " " << int(std::min(255.0, std::max(0.0, color.y*255.0)))
-                << " " << int(std::min(255.0, std::max(0.0, color.z*255.0)));
+                << " " << int(color.x)
+                << " " << int(color.y)
+                << " " << int(color.z);
         } 
     }
     

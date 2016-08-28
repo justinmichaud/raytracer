@@ -60,6 +60,10 @@ public:
         return *this;
     }
     
+    bool operator ==(const Vec &b) const {
+        return this->x==b.x && this->y==b.y && this->z==b.z;
+    }
+    
     friend Vec operator /(Vec lhs, float rhs) {
         lhs /= rhs;
         return lhs;
@@ -103,6 +107,14 @@ public:
     bool isinf() const {
         return std::isinf(this->x) || std::isinf(this->y) || std::isinf(this->z)
             || std::isnan(this->x) || std::isnan(this->y) || std::isnan(this->z);
+    }
+    
+    Vec clamp(float min, float max) const {
+        Vec v(0,0,0);
+        v.x = std::min(max, std::max(min, this->x));
+        v.y = std::min(max, std::max(min, this->y));
+        v.z = std::min(max, std::max(min, this->z));
+        return v;
     }
 };
 
