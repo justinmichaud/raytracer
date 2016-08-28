@@ -76,13 +76,37 @@ private:
 };
 
 Vec background(const Vec& pos, const Vec& dir) {
-    const Sphere background = Sphere(pos, 0.5);
-    Vec b = background.collision(pos, dir);
-    if (b.isinf()) return Vec(1,0,0); //Should not happen
+    //Find intersection with ground plane
+    //https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
     
-    float y = background.objectSpace(b).y/background.radius + 0.5;
+    float groundPlaneY = 1;
+    Vec p0(0,groundPlaneY, 0);
+    Vec n(0,1,0);
     
-    return Vec(y*0.3 + 0.3, y*0.4 + 0.4, y*0.7 + 0.5).clamp(0.1, 1);
+    float d = (p0 - pos)*n/(dir*n);
+    Vec intersectionPlane = dir*d;
+    if (d < 0) intersectionPlane = Vec::INFINITE;
+    
+    //Find intersection with skysphere
+    const Sphere backgroundSphere = Sphere(pos, 50);
+    Vec intersectionSphere = backgroundSphere.collision(pos, dir);
+    
+    if (intersectionPlane.isinf() && intersectionSphere.isinf()) return Vec(0,0,0);
+    if (intersectionPlane.isinf() || intersectionSphere.y < groundPlaneY) {
+        //Determine the sky gradient
+        Vec obj = backgroundSphere.objectSpace(intersectionSphere)/backgroundSphere.radius;
+        float h = (-obj.y+1.0)/2.0;
+        return Vec(h*0.3 + 0.3, h*0.4 + 0.4, h*0.7 + 0.5);
+    }
+    else {
+        //Checkerboard
+        float scale = 2;
+    
+        if ((int((intersectionPlane.x+100)*scale)%2==0 
+            || int((intersectionPlane.z+100)*scale)%2==0)
+            && !(int((intersectionPlane.x+100)*scale)%2==0 && int((intersectionPlane.z+100)*scale)%2==0)) return Vec(1,0.1,0.1);
+        else return Vec(1,1,1);
+    }
 }
 
 const Sphere& traceRay(const Vec& pos, const Vec& dir, const std::vector<Sphere>& world) {
@@ -138,7 +162,7 @@ Vec sample(Vec pos, Vec dir, const std::vector<Sphere>& world, int recursiveCoun
         lighting += light.colour*shading;
     }
 
-    return (1-sphere.reflect)*Vec(sphere.colour.x*lighting.x, sphere.colour.y*lighting.y, sphere.colour.z*lighting.z) 
+    return 0.5*Vec(sphere.colour.x*lighting.x, sphere.colour.y*lighting.y, sphere.colour.z*lighting.z) 
         + sphere.reflect*Vec(sphere.colour.x*reflectedSample.x, sphere.colour.y*reflectedSample.y, sphere.colour.z*reflectedSample.z);
 }
 
@@ -146,9 +170,9 @@ int main() {
     Camera camera;
     camera.pos = Vec(0,0,-2);
     std::vector<Sphere> world = {
-        Sphere(Vec(-10,0,0), 0.01, Vec(1,1,1), true), 
-        Sphere(Vec(-0.5,0.1,0), 0.2, Vec(0,1,0), 0.7f), 
-        Sphere(Vec(0.5,0,0), 0.3)
+        Sphere(Vec(-1.1,-1.1,0), 0.01, Vec(1,1,1), true), 
+        Sphere(Vec(-0.5,-0.1,0), 0.3, Vec(0.4,1,0.4), 0.5f), 
+        Sphere(Vec(0.5,0.1,0), 0.3, Vec(1,1,1), 0.5f)
     };
 
     //Netppm image
