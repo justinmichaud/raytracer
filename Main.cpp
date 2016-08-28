@@ -170,10 +170,22 @@ int main() {
     Camera camera;
     camera.pos = Vec(0,0,-2);
     std::vector<Sphere> world = {
-        Sphere(Vec(-1.1,-1.1,0), 0.01, Vec(1,1,1), true), 
-        Sphere(Vec(-0.5,-0.1,0), 0.3, Vec(0.4,1,0.4), 0.5f), 
-        Sphere(Vec(0.5,0.1,0), 0.3, Vec(1,1,1), 0.5f)
+        Sphere(Vec(-1.1,-1.1,0), 0.01, Vec(1,1,1), true),
     };
+    
+    float name[5][5] = {
+        {1,1,1,1,1},
+        {0,0,1,0,0},
+        {0,0,1,0,0},
+        {1,0,1,0,0},
+        {1,1,1,0,0},
+    };
+    
+    for (int i=0; i<5; i++) {
+        for (int j=0; j<5; j++) {
+            if (name[j][i]) world.push_back(Sphere(Vec((i-2)*0.15,(j-2)*0.15,0), 0.1, Vec(1,1,1), 0.7f));
+        }
+    }
 
     //Netppm image
     int width = 500;
