@@ -2,7 +2,7 @@
 #include <cmath>
 #include <vector>
 #include "Vector.h"
-
+//test
 class Camera {
 public:
     Vec pos = Vec(0,0,0);
